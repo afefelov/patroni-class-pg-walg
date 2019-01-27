@@ -58,4 +58,7 @@ ADD run-patroni.sh /etc/service/patroni/run
 RUN chmod 755 /etc/service/patroni/run
 
 RUN export TERM=xterm
+
 ENV PATH /usr/bin:$PATH
+ENV PATH /usr/lib/postgresql/$PG_MAJOR/bin:$PATH
+ENV PGDATA /var/lib/postgresql/data
