@@ -5,17 +5,40 @@ MAINTAINER Andy Fefelov <andy@mastery.pro>
 ENV DEBIAN_FRONTEND noninteractive
 ENV PG_MAJOR 9.6
 
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
-RUN apt-get update
-RUN apt-get install -y wget ca-certificates sudo
+RUN apt-get update && apt-get install -y ca-certificates wget sudo
+
+# grab gosu for easy step-down from root
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4
+
 RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 RUN apt-get update
 RUN apt-get upgrade -y
 
-RUN apt-get install --no-install-recommends -y postgresql-server-dev-$PG_MAJOR libpq-dev postgresql-client-$PG_MAJOR
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* \
+    && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/1.2/gosu-$(dpkg --print-architecture)" \
+    && wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/1.2/gosu-$(dpkg --print-architecture).asc" \
+    && gpg --verify /usr/local/bin/gosu.asc \
+    && rm /usr/local/bin/gosu.asc \
+    && chmod +x /usr/local/bin/gosu \
+    && apt-get purge -y --auto-remove ca-certificates
+
+RUN apt-get update \
+    && apt-get install -y postgresql-common \
+    && sed -ri 's/#(create_main_cluster) .*$/\1 = false/' /etc/postgresql-common/createcluster.conf \
+    && apt-get install -y \
+        postgresql-$PG_MAJOR\
+        postgresql-contrib-$PG_MAJOR
+
+
+RUN mkdir -p /var/run/postgresql && chown -R postgres /var/run/postgresql
+
+RUN apt-get install --no-install-recommends -y libpq-dev postgresql-client-$PG_MAJOR
 
 RUN apt-get update && apt-get install -y htop vim iftop iotop iperf net-tools iputils-ping python-pip postgresql-server-dev-$PG_MAJOR git
-RUN pip install pgcli psutil patroni[consul] python-consul dnspython boto mock requests six kazoo click tzlocal prettytable PyYAML
+
+RUN pip install psutil patroni[consul] python-consul dnspython boto mock requests six kazoo click tzlocal prettytable PyYAML
 
 #wal-g staff
 RUN wget https://github.com/wal-g/wal-g/releases/download/v0.1.15/wal-g.linux-amd64.tar.gz && tar -zxvf wal-g.linux-amd64.tar.gz && mv wal-g /usr/bin && chmod +x /usr/bin/wal-g && rm wal-g.linux-amd64.tar.gz
@@ -32,6 +55,7 @@ RUN chmod 777 /usr/bin/restore_backup.sh
 # patroni staff
 RUN mkdir /etc/service/patroni
 ADD run-patroni.sh /etc/service/patroni/run
+RUN chmod 755 /etc/service/patroni/run
 
 RUN export TERM=xterm
 ENV PATH /usr/bin:$PATH
