@@ -44,13 +44,19 @@ RUN pip install psutil patroni[consul] python-consul dnspython boto mock request
 RUN wget https://github.com/wal-g/wal-g/releases/download/v0.1.15/wal-g.linux-amd64.tar.gz && tar -zxvf wal-g.linux-amd64.tar.gz && mv wal-g /usr/bin && chmod +x /usr/bin/wal-g && rm wal-g.linux-amd64.tar.gz
 
 #wal-g operational staff
+ENV WALG_S3_STORAGE_CLASS STANDARD_IA
+ENV WALG_COMPRESSION_METHOD lzma
 ENV WALG_UPLOAD_DISK_CONCURRENCY 5
 
+ADD archive_command.sh /usr/bin/archive_command.sh
+ADD perform_backup.sh /usr/bin/perform_backup.sh
 ADD restore_command.sh /usr/bin/restore_command.sh
 ADD restore_backup.sh /usr/bin/restore_backup.sh
 
 RUN chmod 777 /usr/bin/restore_command.sh
 RUN chmod 777 /usr/bin/restore_backup.sh
+RUN chmod 755 /usr/bin/archive_command.sh
+RUN chmod 755 /usr/bin/perform_backup.sh
 
 # patroni staff
 RUN mkdir /etc/service/patroni
