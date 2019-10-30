@@ -3,7 +3,7 @@ FROM phusion/baseimage
 MAINTAINER Andy Fefelov <andy@mastery.pro>
 
 ENV DEBIAN_FRONTEND noninteractive
-ENV PG_MAJOR 9.6
+ENV PG_MAJOR 11
 
 RUN apt-get update && apt-get install -y ca-certificates wget sudo
 
